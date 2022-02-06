@@ -50,6 +50,9 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
     private lateinit var directCallButton:Button
     private lateinit var dialCallButton:Button
 
+    private var photoViewWidth = 0
+    private var photoViewHeight = 0
+
     private val crimeDetailViewModel: CrimeDetailViewModel by lazy {
         ViewModelProvider(this).get(CrimeDetailViewModel::class.java)
     }
@@ -203,6 +206,10 @@ class CrimeFragment : Fragment(), DatePickerFragment.Callbacks {
                 }
 
                 startActivityForResult(captureImage, REQUEST_PHOTO)
+            }
+            photoView.setOnClickListener{
+                ImageDialogFragment.newInstance(photoFile)
+                    .show(this@CrimeFragment.parentFragmentManager, "DialogImage")
             }
         }
     }
