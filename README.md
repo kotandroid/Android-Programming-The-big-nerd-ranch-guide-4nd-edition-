@@ -20,7 +20,7 @@
 
 
 ### main 스레드와 ThumbnailDownloader 스레드의 소통 과정
-  > 1. main스레드의 messageQueue에서 요청 - onBindViewHoler()에서 이미지 요청
+  1. main스레드의 messageQueue에서 요청 - onBindViewHoler()에서 이미지 요청
   2. '이 이미지를 내려받아라' - queueThumbnail() 호출 
   3. requestHandler가 ThumbnailDownloader 스레드의 루퍼에게 전달 -> 루퍼는 메시지 큐에 적재 
   4. 메시지의 순서가 되면 루퍼가 메시지 큐에 있는 메시지를 requestHandler에게 요청 
