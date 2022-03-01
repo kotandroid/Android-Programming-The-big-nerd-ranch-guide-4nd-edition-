@@ -11,6 +11,7 @@ import android.util.Log
 import android.view.*
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContentProviderCompat.requireContext
@@ -36,6 +37,7 @@ class PhotoGalleryFragment : Fragment() {
     private lateinit var photoGalleryViewModel: PhotoGalleryViewModel
     private lateinit var photoRecyclerView: RecyclerView
     private lateinit var thumbnailDownloader: ThumbnailDownloader<PhotoHolder>
+    private lateinit var progressDialog: ProgressDialog
     private lateinit var imm : InputMethodManager
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -44,7 +46,8 @@ class PhotoGalleryFragment : Fragment() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+//        showProgressDialog(false)
+        progressDialog = ProgressDialog(requireContext())
 
         retainInstance = true
         setHasOptionsMenu(true) // 위 프래그먼트가 안드로이드 운영체제로부터 메뉴의 콜백 함수를 호출을 받을 수 있게 해준다.
@@ -57,17 +60,17 @@ class PhotoGalleryFragment : Fragment() {
             ThumbnailDownloader(responseHandler) { photoHolder, bitmap ->
                 val drawable = BitmapDrawable(resources, bitmap)
                 photoHolder.bindDrawable(drawable)
+                progressDialog.hideProgress()
             }
         lifecycle.addObserver(thumbnailDownloader.fragmentLifecycleObserver)
 
-
-
     }
 
-    private fun hideKeyboard(inputMethodManager: InputMethodManager, view: View){
-        inputMethodManager.hideSoftInputFromWindow(view.windowToken,0)
-        view.clearFocus()
-    }
+//    private fun showProgressDialog(isShow:Boolean){
+//        if(isShow) progressDialog.hideProgress() = View.VISIBLE
+//        else progressBar?.visibility=View.GONE
+//    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -112,7 +115,6 @@ class PhotoGalleryFragment : Fragment() {
         super.onCreateOptionsMenu(menu, inflater)
         inflater.inflate(R.menu.fragment_photo_gallery, menu)
 
-
         val searchItem: MenuItem = menu.findItem(R.id.menu_item_search)
         val searchView = searchItem.actionView as SearchView
 
@@ -121,10 +123,9 @@ class PhotoGalleryFragment : Fragment() {
             setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                 // 사용자가 제출한 쿼리 문자열이 함수의 인자로 전달되고 true를 반환하면 검색 요청이 처리되었음을 시스템에게 알린다.
                 override fun onQueryTextSubmit(queryText: String): Boolean {
+
                     Log.d(TAG, "QueryTextSubmit: $queryText")
                     photoGalleryViewModel.fetchPhotos(queryText)
-
-
                     imm.hideSoftInputFromWindow(view?.windowToken,0)
                     return true
                 }
@@ -140,6 +141,7 @@ class PhotoGalleryFragment : Fragment() {
                 searchView.setQuery(photoGalleryViewModel.searchTerm, false)
             }
         }
+
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -182,6 +184,7 @@ class PhotoGalleryFragment : Fragment() {
             ) ?: ColorDrawable()
             holder.bindDrawable(placeholder)
 
+            progressDialog.showProgress()
             thumbnailDownloader.queueThumbnail(holder, galleryItem.url)
         }
     }
