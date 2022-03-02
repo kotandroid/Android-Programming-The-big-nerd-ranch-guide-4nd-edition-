@@ -2,12 +2,14 @@ package com.bignerdranch.android.photogallery
 
 import android.app.Activity
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
+import android.util.LruCache
 import android.view.*
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
@@ -23,6 +25,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bignerdranch.android.photogallery.api.FlickrApi
+import com.bumptech.glide.Glide
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -37,6 +40,7 @@ class PhotoGalleryFragment : Fragment() {
     private lateinit var photoRecyclerView: RecyclerView
     private lateinit var thumbnailDownloader: ThumbnailDownloader<PhotoHolder>
     private lateinit var imm : InputMethodManager
+    private lateinit var memoryCache: LruCache<String,Bitmap>
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
@@ -45,6 +49,13 @@ class PhotoGalleryFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val maxMemory = (Runtime.getRuntime().maxMemory()/1024).toInt()
+        val cacheSize = maxMemory/8
+        memoryCache = object :LruCache<String,Bitmap>(cacheSize){
+            override fun sizeOf(key: String, value: Bitmap): Int {
+                return value.byteCount/1024
+            }
+        }
 
         retainInstance = true
         setHasOptionsMenu(true) // 위 프래그먼트가 안드로이드 운영체제로부터 메뉴의 콜백 함수를 호출을 받을 수 있게 해준다.
@@ -59,15 +70,8 @@ class PhotoGalleryFragment : Fragment() {
                 photoHolder.bindDrawable(drawable)
             }
         lifecycle.addObserver(thumbnailDownloader.fragmentLifecycleObserver)
-
-
-
     }
 
-    private fun hideKeyboard(inputMethodManager: InputMethodManager, view: View){
-        inputMethodManager.hideSoftInputFromWindow(view.windowToken,0)
-        view.clearFocus()
-    }
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -152,7 +156,7 @@ class PhotoGalleryFragment : Fragment() {
         }
     }
 
-    private class PhotoHolder(private val itemImageView: ImageView)
+    private class PhotoHolder(val itemImageView: ImageView)
         : RecyclerView.ViewHolder(itemImageView) {
 
         val bindDrawable: (Drawable) -> Unit = itemImageView::setImageDrawable
@@ -183,7 +187,29 @@ class PhotoGalleryFragment : Fragment() {
             holder.bindDrawable(placeholder)
 
             thumbnailDownloader.queueThumbnail(holder, galleryItem.url)
+
+            holder.apply {
+                Glide.with(requireContext()).load(galleryItem.url)
+                    .override(150,150)
+                    .into(itemImageView)
+            }
+
+            if(position <= galleryItems.size){
+                val endPosition = if(position + 6 > galleryItems.size){
+                    galleryItems.size
+                }else{
+                    position + 6
+                }
+                galleryItems.subList(position,endPosition).map { it.url }.forEach{
+                    preload(requireContext(),it)
+                }
+            }
         }
+    }
+
+    fun preload(context: Context, url : String){
+        Glide.with(context).load(url)
+            .preload(150,150)
     }
 
     companion object {
